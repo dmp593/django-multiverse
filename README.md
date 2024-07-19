@@ -25,7 +25,7 @@ Alternatively, you can add it to your `pyproject.toml` file:
 
 ```toml
 [tool.poetry.dependencies]
-django-multiverse = "^1.0.6"
+django-multiverse = "^1.0.1"
 ```
 
 ## Usage
