@@ -161,10 +161,10 @@ def get_db_utils_module(db_alias: str) -> ModuleType | None:
     db_engine = settings.DATABASES[db_alias]['ENGINE']
 
     if 'sqlite3' in db_engine:
-        return import_module('tenants.db.backends.sqlite3.utils')
+        return import_module('multiverse.db.backends.sqlite3.utils')
 
     if 'postgresql' in db_engine:
-        return import_module('tenants.db.backends.postgresql.utils')
+        return import_module('multiverse.db.backends.postgresql.utils')
 
     return None
 
