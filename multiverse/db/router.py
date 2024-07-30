@@ -40,8 +40,7 @@ class TenantRouter:
                 return True
 
             # eg, apps with full name: django.contrib.contenttypes
-            app_label = app.split('.')[-1]
-            if app_label == app_label:
+            if app_label == app.split('.')[-1]:
                 return True
 
         return False
