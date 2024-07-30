@@ -25,7 +25,7 @@ def set_current_tenant(tenant: Any):
 
     # We shouldn't alter settings at runtime...
     # https://docs.djangxoproject.com/en/5.0/topics/settings/#altering-settings-at-runtime
-    settings.DATABASES[alias]['NAME'] = tenant.database_name
+    settings.DATABASES[alias]['NAME'] = tenant.database_name if tenant else ''
 
     tenant_changed.send(sender=tenant.__class__, instance=tenant)
 
