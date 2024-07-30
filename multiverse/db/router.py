@@ -33,14 +33,27 @@ class TenantRouter:
 
         return db_obj1 and db_obj2 and db_obj1 == db_obj2
 
+    def app_label_in_apps(self, app_label, apps):
+        for app in apps:
+            # eg, typical apps: mycustomapp
+            if app_label == app:
+                return True
+
+            # eg, apps with full name: django.contrib.contenttypes
+            app_label = app.split('.')[-1]
+            if app_label == app_label:
+                return True
+
+        return False
+
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if is_test_environment():
             return True
 
-        if app_label in get_common_apps():
+        if self.app_label_in_apps(app_label, get_common_apps()):
             return True
 
-        if app_label in get_system_apps():
+        if self.app_label_in_apps(app_label, get_system_apps()):
             return db == DEFAULT_DB_ALIAS
 
         return db == get_tenant_database_alias()

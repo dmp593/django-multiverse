@@ -58,15 +58,39 @@ To use Django Multiverse in your project, follow these steps:
     TENANT_MODEL = 'yourapp.Tenant'
     ```
 
-4. Use the provided mixins and decorators to manage tenant-specific views and models.
+4. Separate the apps per system, tenant or common to both:
 
-5. To create a tenant, use the management command:
+    ```python
+
+    SYSTEM_APPS = [
+        # ...
+        'app0',
+    ]
+
+    COMMON_APPS = [
+        # ...
+        'app1',
+        'app2',
+    ]
+
+    TENANT_APPS = [
+        # ...
+        'app3'
+    ]
+
+    INSTALLED_APPS = SYSTEM_APPS + COMMON_APPS + TENANT_APPS
+
+    ``` 
+
+5. Run the migrations
+
+6. To create a tenant, use the management command:
 
     ```bash
     python manage.py create_tenant <subdomain> --database-name <database_name> --create-database --migrate
     ```
 
-6. To destroy a tenant, use the management command:
+7. To destroy a tenant, use the management command:
 
     ```bash
     python manage.py destroy_tenant <lookup> --drop-database
