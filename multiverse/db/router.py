@@ -24,12 +24,11 @@ class TenantRouter:
 
         app_label = model._meta.app_label
 
+        if self.app_label_in_apps(app_label, get_common_apps()):
+            return None
+
         if self.app_label_in_apps(app_label, get_system_apps()):
             return DEFAULT_DB_ALIAS
-
-        if self.app_label_in_apps(app_label, get_common_apps()):
-            is_tenant_active = get_current_tenant() is not None
-            return get_tenant_database_alias() if is_tenant_active else DEFAULT_DB_ALIAS
 
         return get_tenant_database_alias()
 
