@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-multiverse"
-version = "1.0.7"
+version = "1.0.8"
 description = "Django Multiverse: Multi-Tenancy for Django"
 authors = ["Daniel Pinto <dmp593@gmail.com>"]
 license = "MIT"

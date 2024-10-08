@@ -49,8 +49,11 @@ class TenantRouter:
         return self.db_for('write', model, **hints)
 
     def allow_relation(self, obj1, obj2, **hints):
-        db_obj1 = hints.get('database', obj1._state.db) or self.db_for_read(obj1, relation=obj2)
-        db_obj2 = hints.get('database', obj2._state.db) or self.db_for_read(obj2, relation=obj1)
+        if obj1._state.db == obj2._state.db:
+            return True
+
+        db_obj1 = hints.get('database', None) or self.db_for_read(obj1, relation=obj2)
+        db_obj2 = hints.get('database', None) or self.db_for_read(obj2, relation=obj1)
 
         return db_obj1 and db_obj2 and db_obj1 == db_obj2
 
