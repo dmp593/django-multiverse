@@ -51,10 +51,19 @@ class ConfigurationCheckTests(SimpleTestCase):
     def test_an_unclassified_app_is_a_warning(self):
         self.assertIn('multiverse.W001', run(checks.check_app_classification))
 
-    @override_settings(TENANT_HEADER_ENABLED=True)
-    def test_enabling_the_tenant_header_is_a_warning(self):
+    @override_settings(DEBUG=False, TENANT_HEADER_ENABLED=True)
+    def test_trusting_the_tenant_header_in_production_is_a_warning(self):
         """
-        The header lets any client choose which tenant to be served, so turning
-        it on is a decision that should be visible at startup.
+        The header lets any client choose which tenant to be served, so trusting
+        it in production is a decision that should be visible at startup.
         """
         self.assertIn('multiverse.W002', run(checks.check_tenant_header))
+
+    @override_settings(DEBUG=True)
+    def test_the_tenant_header_is_not_flagged_in_development(self):
+        """
+        Under DEBUG the header is the intended way to switch tenants on
+        localhost. Warning on every runserver start would train people to
+        ignore the checks.
+        """
+        self.assertEqual(run(checks.check_tenant_header), set())

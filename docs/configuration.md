@@ -107,14 +107,26 @@ marginally faster.
 
 ### `TENANT_HEADER_ENABLED`
 
-*Default:* `False`
+*Default:* `DEBUG` — on in development, off in production
 
-Whether an HTTP header may select the tenant. **Off by default because the
-header overrides the hostname and any client can send it.** Enabling it emits
-`multiverse.W002`.
+Whether an HTTP header may select the tenant.
 
-Only turn it on when a trusted reverse proxy strips the inbound value and sets
-it itself. See [security.md](security.md).
+**In development it is how you switch tenants.** `localhost` has no subdomain to
+route on, and the loopback rule above only ever reaches one tenant, so naming
+the tenant in a header is the only practical way to work against several:
+
+```bash
+curl -H 'X-Tenant: acme' http://localhost:8000/invoices/
+```
+
+**In production it is a liability.** The header overrides the hostname and any
+client can send it. Trusting it in production emits `multiverse.W002` and
+requires a proxy that strips the inbound value and sets it itself. See
+[security.md](security.md).
+
+Set it explicitly to override the `DEBUG` default in either direction —
+`TENANT_HEADER_ENABLED = False` while developing is how you reproduce production
+resolution locally.
 
 ### `TENANT_HEADER_NAME`
 
@@ -143,7 +155,7 @@ tenant opens that tenant's **real** database. See [testing.md](testing.md).
 | `multiverse.E004` | Error | `TenantRouter` not in `DATABASE_ROUTERS` |
 | `multiverse.E005` | Error | An app is claimed by more than one tier |
 | `multiverse.W001` | Warning | Installed apps in no tier |
-| `multiverse.W002` | Warning | The tenant header is enabled |
+| `multiverse.W002` | Warning | The tenant header is trusted with `DEBUG` off |
 
 Run them with `python manage.py check`.
 
@@ -193,5 +205,7 @@ DATABASE_ROUTERS = ['multiverse.db.router.TenantRouter']
 TENANT_MODEL = 'multiverse.Tenant'
 TENANT_DATABASE_ALIAS = 'tenant'
 SYSTEM_ROUTES = ['health', 'signup']
-TENANT_HEADER_ENABLED = False
+
+# Left unset: follows DEBUG, so the header is trusted locally and ignored in
+# production. Set it to True only behind a proxy that strips and re-sets it.
 ```

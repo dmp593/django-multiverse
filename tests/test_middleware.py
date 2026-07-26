@@ -47,11 +47,13 @@ class TenantHeaderTests(TestCase):
         Tenant.objects.create(subdomain='victim', database_name='db_victim')
         self.client = Client()
 
-    def test_the_header_is_ignored_by_default(self):
+    def test_the_header_is_ignored_in_production(self):
         """
-        The header outranks the hostname, and any client can set it. Trusting it
-        unconditionally let an unauthenticated request choose which customer's
-        database to read.
+        With DEBUG off the header outranks the hostname and any client can set
+        it, so trusting it unconditionally let an unauthenticated request choose
+        which customer's database to read.
+
+        Django's test runner forces DEBUG off, so this is the default here.
         """
         response = self.client.get(
             '/whoami/', HTTP_HOST='acme.example.com', HTTP_X_TENANT='victim'
@@ -59,8 +61,30 @@ class TenantHeaderTests(TestCase):
 
         self.assertEqual(response.json()['tenant'], 'acme')
 
+    @override_settings(DEBUG=True)
+    def test_the_header_works_in_development_without_configuration(self):
+        """
+        Subdomain routing has nothing to route on at localhost, and the loopback
+        fallback can only ever reach one tenant. The header is how you switch
+        tenants locally, so it needs no setup while DEBUG is on.
+        """
+        response = self.client.get(
+            '/whoami/', HTTP_HOST='localhost', HTTP_X_TENANT='victim'
+        )
+
+        self.assertEqual(response.json()['tenant'], 'victim')
+
+    @override_settings(DEBUG=True, TENANT_HEADER_ENABLED=False)
+    def test_the_header_can_be_turned_off_in_development(self):
+        """Reproducing production resolution locally has to be possible."""
+        response = self.client.get(
+            '/whoami/', HTTP_HOST='acme.example.com', HTTP_X_TENANT='victim'
+        )
+
+        self.assertEqual(response.json()['tenant'], 'acme')
+
     @override_settings(TENANT_HEADER_ENABLED=True)
-    def test_the_header_is_honoured_when_explicitly_enabled(self):
+    def test_the_header_is_honoured_in_production_when_explicitly_enabled(self):
         response = self.client.get(
             '/whoami/', HTTP_HOST='acme.example.com', HTTP_X_TENANT='victim'
         )

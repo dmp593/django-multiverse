@@ -27,9 +27,15 @@
 
 ### Tenant selection via the `X-Tenant` header
 
-**Risk: critical. Disabled by default.**
+**Risk: critical in production. Off there by default.**
 
-The header overrides the hostname, and any client can send it:
+The header exists for development: `localhost` has no subdomain to route on, and
+the loopback rule reaches only one tenant, so a header is the only practical way
+to work against several locally.
+
+In production the same mechanism is a direct cross-tenant read/write primitive
+reachable without authenticating, because the header overrides the hostname and
+any client can send it:
 
 ```http
 GET /api/invoices/ HTTP/1.1
@@ -37,14 +43,19 @@ Host: acme.example.com
 X-Tenant: competitor
 ```
 
-Trusted unconditionally, this is a direct cross-tenant read/write primitive
-reachable without authenticating.
+`TENANT_HEADER_ENABLED` therefore defaults to `DEBUG` — trusted while you are
+developing, ignored once `DEBUG` is off. Trusting it with `DEBUG` off raises
+`multiverse.W002` at startup so the decision is visible. It is deliberately not
+warned about in development, where it is the intended mechanism; a check that
+fires on every `runserver` is a check people learn to ignore.
 
-`TENANT_HEADER_ENABLED` defaults to `False`, and turning it on raises
-`multiverse.W002` at startup so the decision is visible.
+> Because the default is tied to `DEBUG`, running with `DEBUG = True` in
+> production means the header is trusted. That is already a severe
+> misconfiguration for other reasons — Django's own `security.W018` covers it —
+> but this is one more consequence of it.
 
-Only enable it behind a reverse proxy that **strips the inbound header and sets
-it itself**:
+Only enable it in production behind a reverse proxy that **strips the inbound
+header and sets it itself**:
 
 ```nginx
 proxy_set_header X-Tenant "";              # discard whatever the client sent
@@ -147,7 +158,8 @@ it does not need access to the system database.
 
 ## Deployment checklist
 
-- [ ] `TENANT_HEADER_ENABLED` is `False`, or the proxy strips and re-sets it
+- [ ] `TENANT_HEADER_ENABLED` is unset (so it follows `DEBUG`), or the proxy
+      strips and re-sets the header
 - [ ] `ALLOWED_HOSTS` lists real domains, not `['*']`
 - [ ] `DEBUG = False` — the loopback tenant shortcut is `DEBUG`-gated
 - [ ] `python manage.py check` reports nothing

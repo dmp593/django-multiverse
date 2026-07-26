@@ -125,5 +125,21 @@ class SettingsAccessorTests(SimpleTestCase):
     def test_the_base_database_name_comes_from_settings_not_a_connection(self):
         self.assertIsNotNone(multiverse_settings.tenant_database_name)
 
-    def test_the_tenant_header_is_disabled_by_default(self):
-        self.assertFalse(multiverse_settings.tenant_header_enabled)
+    def test_the_tenant_header_follows_debug_by_default(self):
+        """
+        On in development, where it is the only way to reach more than one
+        tenant from localhost; off in production, where it is a way for a
+        client to pick someone else's database.
+        """
+        with override_settings(DEBUG=True):
+            self.assertTrue(multiverse_settings.tenant_header_enabled)
+
+        with override_settings(DEBUG=False):
+            self.assertFalse(multiverse_settings.tenant_header_enabled)
+
+    def test_an_explicit_tenant_header_setting_overrides_debug(self):
+        with override_settings(DEBUG=True, TENANT_HEADER_ENABLED=False):
+            self.assertFalse(multiverse_settings.tenant_header_enabled)
+
+        with override_settings(DEBUG=False, TENANT_HEADER_ENABLED=True):
+            self.assertTrue(multiverse_settings.tenant_header_enabled)

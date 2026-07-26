@@ -12,10 +12,12 @@ No schema change: `0002` attaches validators and help text only.
 
 ### Security
 
-- **The `X-Tenant` header is now opt-in** (`TENANT_HEADER_ENABLED`, default
-  `False`). It overrode the hostname and was trusted unconditionally, so any
-  client could name the tenant it wanted to be served. Enabling it raises
-  `multiverse.W002` at startup.
+- **The `X-Tenant` header is no longer trusted in production.**
+  `TENANT_HEADER_ENABLED` now defaults to `DEBUG`. The header exists so that
+  tenants can be switched on `localhost`, where there is no subdomain to route
+  on, and it keeps working there unchanged. With `DEBUG` off it was a way for
+  any client to override the hostname and name the customer database it wanted
+  to read; that now requires opting in, and raises `multiverse.W002`.
 - **Cross-tenant leak under threads fixed.** Tenant activation rewrote
   `settings.DATABASES['tenant']['NAME']`, which is process-global while the
   tenant itself was thread-local. Two threads serving two tenants raced and the
@@ -115,7 +117,7 @@ No schema change: `0002` attaches validators and help text only.
 - `multiverse.validators`.
 - Settings `TENANT_DATABASE_DIRECTORY`, `TENANT_PROVISIONING_DATABASE`,
   `TENANT_HEADER_ENABLED`, `TENANT_HEADER_NAME`.
-- A 98-test suite over a three-tier example project.
+- A 102-test suite over a three-tier example project.
 - `py.typed`, ruff configuration, `CONTRIBUTING.md`, and documentation under
   `docs/`.
 

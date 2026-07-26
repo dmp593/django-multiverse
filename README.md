@@ -220,24 +220,49 @@ def set_log_context(sender, instance, **kwargs):
 
 ## How a request finds its tenant
 
-1. The tenant header, **only if you enable it** (see below).
+1. The `X-Tenant` header, if it is trusted — see below.
 2. While `DEBUG` is on and the host is loopback, the tenant whose database is
-   `TENANT_DATABASE_NAME` — your local development tenant.
+   `TENANT_DATABASE_NAME` — your default local tenant.
 3. Otherwise the first label of the hostname: `acme.example.com` → `acme`.
 
 No match is a 404.
 
-### Security: the tenant header is off by default
+### Switching tenants in development
 
-`X-Tenant` overrides the hostname, and any client can send it. Left on, an
-unauthenticated request can choose which customer's database to read.
+There is no subdomain to route on at `localhost`, and rule 2 only ever reaches
+one tenant. So in development you name the tenant with a header:
+
+```bash
+curl -H 'X-Tenant: acme' http://localhost:8000/invoices/
+```
+
+This works out of the box — **`TENANT_HEADER_ENABLED` defaults to `DEBUG`**, so
+it is on locally and off in production, with no configuration either way.
+
+If you would rather use real subdomains locally, Chrome and Firefox resolve
+`*.localhost` to loopback with no setup (Safari and most CLI tools do not, so
+add `/etc/hosts` entries for those):
 
 ```python
-TENANT_HEADER_ENABLED = True     # only behind a proxy that strips + sets it
+ALLOWED_HOSTS = ['.localhost', '127.0.0.1']
+# → http://acme.localhost:8000/
+```
+
+### In production the same header is a liability
+
+With `DEBUG` off the header is ignored, because it overrides the hostname and
+any client can send it — trusted blindly, an unauthenticated request could pick
+which customer's database to read.
+
+Turn it on only behind a proxy that **strips the inbound value and sets it
+itself**:
+
+```python
+TENANT_HEADER_ENABLED = True
 TENANT_HEADER_NAME = 'X-Tenant'
 ```
 
-Enabling it raises a startup warning by design. Full threat model in
+Doing so raises a startup warning by design. Full threat model in
 [docs/security.md](docs/security.md).
 
 ---

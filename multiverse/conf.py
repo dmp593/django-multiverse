@@ -139,11 +139,29 @@ class MultiverseSettings:
         """
         Whether the tenant may be selected by an inbound HTTP header.
 
-        Defaults to ``False``. The header is attacker-controlled: any client can
-        set it, and it overrides the hostname. Only enable it when a trusted
-        reverse proxy strips the inbound value and sets it itself.
+        Defaults to ``DEBUG``: on in development, off in production.
+
+        The header exists because subdomain routing does not work on
+        ``localhost`` — there is no ``acme.localhost`` to send a browser to, and
+        the loopback fallback below can only ever reach one tenant. Sending
+        ``X-Tenant: acme`` is how you switch tenants locally.
+
+        In production the same header is a liability: it overrides the hostname
+        and any client can set it, so an unauthenticated request could name the
+        tenant it wanted to be served. Turning it on there is a deliberate
+        decision that requires a proxy which strips the inbound value and sets
+        it itself, so it must be opted into explicitly.
+
+        Set it to ``True`` or ``False`` to override the ``DEBUG`` default in
+        either direction — ``False`` in development is how you reproduce
+        production resolution locally.
         """
-        return bool(getattr(django_settings, 'TENANT_HEADER_ENABLED', False))
+        configured = getattr(django_settings, 'TENANT_HEADER_ENABLED', None)
+
+        if configured is None:
+            return bool(django_settings.DEBUG)
+
+        return bool(configured)
 
     @property
     def tenant_header_name(self) -> str:

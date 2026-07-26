@@ -79,9 +79,9 @@ TENANT_DATABASE_ALIAS = 'tenant'
 # resolves outside it is rejected before it reaches the filesystem.
 TENANT_DATABASE_DIRECTORY = BASE_DIR / 'tenant_databases'
 
-# Off by default, and left off here so the suite exercises the secure default.
-# Individual tests turn it on with override_settings.
-TENANT_HEADER_ENABLED = False
+# TENANT_HEADER_ENABLED is deliberately not set, so the suite exercises the real
+# default: it follows DEBUG. Django's test runner forces DEBUG off, so the
+# header is untrusted here unless a test opts in with override_settings.
 
 # Recommended in every test settings module. Routing stays fully active; this
 # only stops per-tenant connection aliases from being derived, which keeps every

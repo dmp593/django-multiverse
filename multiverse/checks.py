@@ -128,14 +128,18 @@ def check_app_classification(app_configs, **kwargs):
 
 @register()
 def check_tenant_header(app_configs, **kwargs):
-    if not multiverse_settings.tenant_header_enabled:
+    # Under DEBUG the header is the intended way to switch tenants on
+    # localhost, where there is no subdomain to route on. Warning about it
+    # there would be noise on every runserver start, and noisy checks are
+    # checks people learn to ignore.
+    if settings.DEBUG or not multiverse_settings.tenant_header_enabled:
         return []
 
     return [
         Warning(
-            f'TENANT_HEADER_ENABLED is on, so the '
+            f'TENANT_HEADER_ENABLED is on with DEBUG off, so the '
             f'"{multiverse_settings.tenant_header_name}" header selects the '
-            f'tenant and overrides the hostname.',
+            f'tenant and overrides the hostname in production.',
             hint='Any client can set this header. Only keep it enabled if a '
                  'trusted reverse proxy strips the inbound value and sets it '
                  'itself; otherwise a request can choose which customer\'s '

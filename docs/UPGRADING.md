@@ -39,13 +39,24 @@ The soft-delete managers are named by that package:
 | — | `Tenant.objects_deleted` — deleted only |
 | — | `Tenant.objects_with_deleted` — everything |
 
-### Action required 2: the `X-Tenant` header is now off
+### Action required 2: the `X-Tenant` header is now off in production
 
-In 1.x the header selected the tenant and outranked the hostname, with no
-validation. Any client could send `X-Tenant: <someone-else>` and be served that
-customer's database.
+In 1.x the header selected the tenant and outranked the hostname, everywhere and
+with no validation. Any client could send `X-Tenant: <someone-else>` and be
+served that customer's database.
 
-It is now **disabled by default**. If you rely on it:
+`TENANT_HEADER_ENABLED` now defaults to `DEBUG`:
+
+| | 1.x | 2.0 |
+| --- | --- | --- |
+| Development (`DEBUG = True`) | trusted | trusted — **unchanged** |
+| Production (`DEBUG = False`) | trusted | ignored |
+
+**Local development needs no change.** The header is why it exists — `localhost`
+has no subdomain to route on — and it keeps working exactly as before with no
+configuration.
+
+**If you rely on the header in production**, opt in explicitly:
 
 ```python
 TENANT_HEADER_ENABLED = True
@@ -58,8 +69,11 @@ proxy_set_header X-Tenant "";
 proxy_set_header X-Tenant $tenant_from_jwt;
 ```
 
-Enabling it raises `multiverse.W002` at startup, by design. See
-[security.md](security.md).
+Doing so raises `multiverse.W002` at startup, by design. Nothing is warned about
+in development. See [security.md](security.md).
+
+You can also set `TENANT_HEADER_ENABLED = False` while developing, to reproduce
+production resolution locally.
 
 ### Breaking: management command flags
 
@@ -209,7 +223,8 @@ automatically.
 1. `pip install --upgrade django-multiverse`
 2. Add `'timestamps'` to `INSTALLED_APPS`
 3. `python manage.py check` — fix every error and read every warning
-4. Set `TENANT_HEADER_ENABLED = True` **only** if a proxy sets that header
+4. If you rely on `X-Tenant` **in production**, set `TENANT_HEADER_ENABLED = True`
+   — but only if a proxy strips and re-sets it. Local development needs nothing.
 5. Set `TENANT_DATABASE_DIRECTORY` if SQLite files live outside `BASE_DIR`
 6. Update scripts calling `destroy_tenant --drop-database` to pass `--noinput`
 7. Add `TESTING = True` to test settings; run your suite and expect real routing
