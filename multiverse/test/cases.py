@@ -11,7 +11,6 @@ from __future__ import annotations
 from django.test import TestCase, modify_settings, override_settings
 
 from multiverse.awareness import forget_current_tenant, set_current_tenant
-from multiverse.conf import multiverse_settings
 from multiverse.test.client import TenantClient
 from multiverse.utils import get_tenant_model
 
@@ -32,8 +31,9 @@ class TenantTestCaseMixin:
     #: Subdomain of the tenant to create. Also added to ``ALLOWED_HOSTS``.
     tenant_subdomain = 'test'
 
-    #: Database backing the tenant. Defaults to the test tenant database, so
-    #: queries land in the database Django's test runner created and rolls back.
+    #: Database recorded on the tenant row. Defaults to the subdomain. During
+    #: tests nothing is opened by this name — alias derivation is off — so it is
+    #: only meaningful to code that reads ``tenant.database_name``.
     tenant_database_name = None
 
     #: Tenant data lives outside `default`, so tests need every alias declared.
@@ -70,12 +70,21 @@ class TenantTestCaseMixin:
 
     @classmethod
     def _create_tenant(cls):
+        """
+        Create the tenant these tests run as.
+
+        The database name defaults to the subdomain rather than to the tenant
+        alias' configured NAME. Under the test runner that NAME is whatever
+        Django substituted — for SQLite's default in-memory database it is the
+        URI ``file:memorydb_tenant?mode=memory&cache=shared``, which is not a
+        valid database name and cannot be stored on a tenant.
+
+        The value is not used to open anything during tests anyway: alias
+        derivation is off, so every query goes to the tenant alias the test
+        runner created.
+        """
         tenant_model = get_tenant_model()
-        database_name = (
-            cls.tenant_database_name
-            or multiverse_settings.tenant_database_name
-            or cls.tenant_subdomain
-        )
+        database_name = cls.tenant_database_name or cls.tenant_subdomain
 
         tenant, _ = tenant_model.objects.get_or_create(
             subdomain=cls.tenant_subdomain,

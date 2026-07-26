@@ -19,6 +19,11 @@ ruff check multiverse tests      # lint
 python manage.py check           # the package's own startup checks
 ```
 
+Install with `.[all]`. Tests for the optional integrations are decorated
+`skipUnless(<dependency> installed)`, so a partial install turns real coverage
+into a silent skip rather than a failure. The count printed at the end tells you
+which you got — the full suite is 151 tests.
+
 `tests/settings.py` doubles as a worked example of a correctly configured
 project. It defines three apps — one per tier — so routing is exercised for
 real rather than asserted against the router in isolation.

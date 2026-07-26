@@ -75,6 +75,14 @@ No schema change: `0002` attaches validators and help text only.
   unset**, rather than a bare `AttributeError`.
 - **`schedule()` without an active tenant creates a schedule**, not a one-shot
   task.
+- **Scheduler options reach django-q rather than the task.** With a tenant
+  active, `schedule_type`, `name`, `next_run` and the rest were delivered to the
+  task as function keyword arguments, so the schedule fired once with arguments
+  the task never expected. The option list is now explicit and verified against
+  django-q's source by a test.
+- **`TenantTestCase` works under Django's default in-memory SQLite.** The
+  tenant's database name defaulted to the connection's substituted NAME, which
+  for in-memory SQLite is a URI that fails validation.
 - **App classification resolves through Django's app registry**, so apps that
   override `AppConfig.label` are matched.
 - **The admin registers the tenant model only when it is not swapped out.**
@@ -121,9 +129,9 @@ No schema change: `0002` attaches validators and help text only.
 - `multiverse.validators`.
 - Settings `TENANT_DATABASE_DIRECTORY`, `TENANT_PROVISIONING_DATABASE`,
   `TENANT_HEADER_ENABLED`, `TENANT_HEADER_NAME`.
-- A 110-test suite over a three-tier example project, including guards that
-  the core stays engine-neutral and that a third-party backend can be
-  registered from outside the package.
+- A 150-test suite over a three-tier example project, covering every optional
+  extra, and including guards that the core stays engine-neutral and that a
+  third-party backend can be registered from outside the package.
 - `py.typed`, ruff configuration, `CONTRIBUTING.md`, and documentation under
   `docs/`.
 

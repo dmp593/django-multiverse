@@ -16,9 +16,7 @@ Two rules keep that safe:
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Callable
-from functools import cache
 from importlib import import_module
 from typing import Any
 
@@ -28,6 +26,30 @@ from django_q.utils import get_func_repr
 
 from multiverse.awareness import get_current_tenant, tenant_context
 from multiverse.utils import get_tenant
+
+#: Keyword arguments django-q's ``schedule()`` consumes itself. Everything else
+#: a caller passes belongs to the task.
+#:
+#: This mirrors the ``kwargs.pop(...)`` calls in ``django_q.tasks.schedule``, and
+#: is written out rather than introspected. ``schedule(func, *args, **kwargs)``
+#: declares no named parameters, so ``inspect.signature`` reports none — an
+#: earlier attempt to derive this list produced an empty set, which quietly
+#: delivered every scheduler option to the task as a function argument. That is
+#: the exact bug this separation exists to prevent, and it failed silently.
+#:
+#: ``tests/test_tasks.py`` asserts this list still matches django-q's source, so
+#: a newly added option breaks CI instead of going unnoticed.
+SCHEDULE_OPTION_NAMES = frozenset({
+    'name',
+    'hook',
+    'schedule_type',
+    'minutes',
+    'repeats',
+    'next_run',
+    'cron',
+    'cluster',
+    'intended_date_kwarg',
+})
 
 
 def tenant_aware_func(
@@ -86,9 +108,10 @@ def schedule(func: Callable | str, *args, **kwargs):
 
         schedule('reports.rebuild', schedule_type=Schedule.DAILY, name='rebuild')
     """
-    option_names = _schedule_option_names()
     options = {
-        name: kwargs.pop(name) for name in list(kwargs) if name in option_names
+        name: kwargs.pop(name)
+        for name in list(kwargs)
+        if name in SCHEDULE_OPTION_NAMES
     }
 
     tenant = get_current_tenant()
@@ -107,28 +130,6 @@ def schedule(func: Callable | str, *args, **kwargs):
         fn_args=args,
         fn_kwargs=kwargs,
     )
-
-
-@cache
-def _schedule_option_names() -> frozenset[str]:
-    """
-    Keyword arguments that belong to django-q's scheduler rather than to the task.
-
-    Read from django-q's own signature instead of being hardcoded: this package
-    supports a range of django-q versions, and a list that drifted out of date
-    would silently deliver a scheduler option to the task as a function argument.
-
-    Caching is safe here in a way it is not for settings — a function signature
-    cannot change while the process is running.
-    """
-    parameters = inspect.signature(django_q_schedule).parameters
-
-    return frozenset(
-        name
-        for name, parameter in parameters.items()
-        if parameter.kind
-        in (parameter.KEYWORD_ONLY, parameter.POSITIONAL_OR_KEYWORD)
-    ) - {'func'}
 
 
 def _import_callable(dotted_path: str) -> Callable:

@@ -36,7 +36,9 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install "Django~=${{ matrix.django-version }}.0"
-          pip install django-timestampable djangorestframework
+          # Every optional extra: their tests skipUnless the dependency is
+          # present, so omitting one turns real coverage into a silent skip.
+          pip install django-timestampable djangorestframework django-q2 psycopg
           pip install -e .
       - name: Test
         run: python manage.py test tests
@@ -66,7 +68,7 @@ jobs:
       - name: Install
         run: |
           pip install --upgrade pip
-          pip install -e ".[postgres]"
+          pip install -e ".[all]"
           pip install django-timestampable
       - name: Test
         env:

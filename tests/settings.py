@@ -35,6 +35,16 @@ TENANT_APPS = [
     'tests.apps.tenantapp',
 ]
 
+# Optional extras, added only when installed so the suite still runs on a bare
+# install. Both are SYSTEM apps: a task queue and DRF's tables belong in the
+# system database, not in any one tenant's.
+for _optional_app in ('django_q', 'rest_framework'):
+    try:
+        __import__(_optional_app)
+    except ImportError:
+        continue
+    SYSTEM_APPS.append(_optional_app)
+
 INSTALLED_APPS = SYSTEM_APPS + COMMON_APPS + TENANT_APPS
 
 MIDDLEWARE = [
@@ -91,3 +101,6 @@ TENANT_DATABASE_DIRECTORY = BASE_DIR / 'tenant_databases'
 TESTING = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# django-q reads this at import time.
+Q_CLUSTER = {'name': 'multiverse-tests', 'orm': 'default', 'sync': True}
