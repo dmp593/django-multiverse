@@ -95,10 +95,10 @@ def get_current_database_alias() -> str:
     """
     Connection alias serving this thread's tenant.
 
-    Derived on every call rather than cached at activation time. Django discards
-    dynamically registered aliases whenever ``DATABASES`` is overridden, and a
-    cached alias would survive as a dangling reference to a connection that no
-    longer exists.
+    Derived on every call rather than cached at activation time. Nothing owns
+    the alias registry exclusively — destroying a tenant unregisters its alias,
+    and tests patch the connection settings — so a cached alias could outlive
+    the connection it names and become a dangling reference.
     """
     tenant = get_current_tenant()
     database_name = getattr(tenant, 'database_name', None)

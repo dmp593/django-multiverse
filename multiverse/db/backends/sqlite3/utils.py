@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from django.conf import settings as django_settings
 from django.core.exceptions import SuspiciousOperation
 
 from multiverse.conf import multiverse_settings
@@ -26,12 +27,39 @@ from multiverse.validators import validate_database_name
 IN_MEMORY_DATABASE = ':memory:'
 
 
+def get_tenant_database_directory() -> Path:
+    """
+    Directory that file-backed tenant databases are confined to.
+
+    ``TENANT_DATABASE_DIRECTORY`` is read here rather than in
+    :mod:`multiverse.conf` because it means nothing to a server-based engine.
+    Backend-specific settings live with the backend that consumes them, so
+    adding an engine never requires touching the engine-neutral core.
+
+    Defaults to ``BASE_DIR`` when the project defines it, otherwise the
+    directory holding the base tenant database.
+    """
+    configured = getattr(django_settings, 'TENANT_DATABASE_DIRECTORY', None)
+    if configured:
+        return Path(configured).resolve()
+
+    base_dir = getattr(django_settings, 'BASE_DIR', None)
+    if base_dir:
+        return Path(base_dir).resolve()
+
+    base_database = multiverse_settings.tenant_database_name
+    if base_database and base_database != IN_MEMORY_DATABASE:
+        return Path(base_database).resolve().parent
+
+    return Path.cwd().resolve()
+
+
 class SQLiteProvisioner(DatabaseProvisioner):
     """Provisions tenant databases as files inside a confined directory."""
 
     @property
     def directory(self) -> Path:
-        return multiverse_settings.tenant_database_directory
+        return get_tenant_database_directory()
 
     def connection_name(self, database_name: str) -> str:
         if self._is_in_memory(database_name):

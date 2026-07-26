@@ -80,6 +80,10 @@ No schema change: `0002` attaches validators and help text only.
 - **The admin registers the tenant model only when it is not swapped out.**
 - **The router no longer imports `multiverse.test`**, keeping `django.test` off
   the production import path.
+- **Backend-specific settings no longer live in the engine-neutral core.**
+  `TENANT_DATABASE_DIRECTORY` is read by the SQLite provisioner and
+  `TENANT_PROVISIONING_DATABASE` by the PostgreSQL one, so adding an engine
+  never requires editing `conf.py`. Setting names are unchanged.
 - **Packaging: `packages = [{include = "multiverse"}]`.** The previous glob over
   `*.py` silently dropped every non-Python file.
 
@@ -117,7 +121,9 @@ No schema change: `0002` attaches validators and help text only.
 - `multiverse.validators`.
 - Settings `TENANT_DATABASE_DIRECTORY`, `TENANT_PROVISIONING_DATABASE`,
   `TENANT_HEADER_ENABLED`, `TENANT_HEADER_NAME`.
-- A 102-test suite over a three-tier example project.
+- A 110-test suite over a three-tier example project, including guards that
+  the core stays engine-neutral and that a third-party backend can be
+  registered from outside the package.
 - `py.typed`, ruff configuration, `CONTRIBUTING.md`, and documentation under
   `docs/`.
 

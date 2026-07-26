@@ -1,13 +1,20 @@
 """
-Single source of truth for every Django setting this package reads.
+Engine-neutral settings.
 
-Two rules govern this module:
+Three rules govern this module:
 
-1. **Every setting the package reads is declared here.** Scattering
-   ``getattr(settings, ...)`` calls across modules makes it impossible to answer
-   "what can I configure?" without reading the whole codebase.
+1. **Every engine-neutral setting the package reads is declared here.**
+   Scattering ``getattr(settings, ...)`` calls across modules makes it
+   impossible to answer "what can I configure?" without reading the whole
+   codebase.
 
-2. **Nothing is cached.** Values are resolved on every access. Django's
+2. **Nothing engine-specific belongs here.** A setting that only one backend
+   consumes lives in that backend's module — ``TENANT_DATABASE_DIRECTORY`` with
+   the SQLite provisioner, ``TENANT_PROVISIONING_DATABASE`` with the PostgreSQL
+   one. Adding a backend must never require editing this file, or the
+   provisioner abstraction is not buying anything.
+
+3. **Nothing is cached.** Values are resolved on every access. Django's
    ``override_settings`` mutates the settings object in place, so a cached
    accessor would silently keep serving the pre-override value and quietly break
    every downstream test suite.
@@ -15,14 +22,11 @@ Two rules govern this module:
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
 
 DEFAULT_TENANT_DATABASE_ALIAS = 'tenant'
 DEFAULT_TENANT_HEADER_NAME = 'X-Tenant'
-DEFAULT_PROVISIONING_DATABASE = 'postgres'
 
 #: Hostnames that resolve to the development tenant while ``DEBUG`` is on.
 LOOPBACK_HOSTNAMES = frozenset({'127.0.0.1', '::1', 'localhost'})
@@ -71,44 +75,6 @@ class MultiverseSettings:
 
         alias = self.tenant_database_alias
         return django_settings.DATABASES.get(alias, {}).get('NAME') or None
-
-    @property
-    def tenant_database_directory(self) -> Path:
-        """
-        Directory that file-backed tenant databases (SQLite) are confined to.
-
-        Confinement is what stops a hostile or careless ``database_name`` from
-        reaching outside the project. Defaults to ``BASE_DIR`` when the project
-        defines it, otherwise the directory holding the base tenant database.
-        """
-        configured = getattr(django_settings, 'TENANT_DATABASE_DIRECTORY', None)
-        if configured:
-            return Path(configured).resolve()
-
-        base_dir = getattr(django_settings, 'BASE_DIR', None)
-        if base_dir:
-            return Path(base_dir).resolve()
-
-        base_database = self.tenant_database_name
-        if base_database and base_database != ':memory:':
-            return Path(base_database).resolve().parent
-
-        return Path.cwd().resolve()
-
-    @property
-    def provisioning_database_name(self) -> str:
-        """
-        Maintenance database used to issue ``CREATE``/``DROP DATABASE``.
-
-        Server-level DDL cannot be executed from the database it targets, so a
-        second database is needed purely to connect to. ``postgres`` exists on
-        every stock installation; some managed providers require a different one.
-        """
-        return getattr(
-            django_settings,
-            'TENANT_PROVISIONING_DATABASE',
-            DEFAULT_PROVISIONING_DATABASE,
-        )
 
     @property
     def system_apps(self) -> list[str]:

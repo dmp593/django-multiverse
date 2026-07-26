@@ -194,9 +194,10 @@ class SignalTests(TestCase):
 class RegistrySelfHealingTests(DerivesTenantAliases, SimpleTestCase):
     def test_alias_is_reregistered_after_databases_are_overridden(self):
         """
-        Django rebuilds ``connections.settings`` whenever DATABASES changes,
-        discarding dynamically registered aliases. Deriving the alias on demand
-        rather than caching it at activation time is what makes that survivable.
+        Nothing owns the alias registry exclusively: destroying a tenant
+        unregisters its alias, and tests patch the connection settings.
+        Deriving the alias on demand rather than caching it at activation time
+        is what makes an externally removed alias survivable.
         """
         alias = self.alias_for('db_healing')
         self.assertIn(alias, connections.settings)

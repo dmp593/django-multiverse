@@ -130,7 +130,7 @@ for `threads × concurrently-active tenants` and check it against your server's
 
 | Module | Responsibility |
 | --- | --- |
-| `conf` | Every setting the package reads. Resolved, never cached |
+| `conf` | Every *engine-neutral* setting. Resolved, never cached |
 | `models` | `BaseTenant`, `Tenant` (swappable) |
 | `validators` | Constrains the two fields that leave the ORM |
 | `awareness` | Thread-local current tenant; `tenant_context` |
@@ -149,6 +149,22 @@ Dependencies point inward: `conf` and `validators` depend on nothing but Django;
 package, so `django.test` is not pulled into production processes.
 
 ## Adding a database backend
+
+Adding an engine must never require editing engine-neutral code. Three rules
+keep that true, and `tests/test_backend_agnosticism.py` enforces all three:
+
+1. **No core module names an engine.** The only exception is the dispatch table
+   in `db/backends/base.py`, which maps a marker to a dotted path.
+2. **Backend-specific settings live with their backend.**
+   `TENANT_DATABASE_DIRECTORY` is read by the SQLite provisioner,
+   `TENANT_PROVISIONING_DATABASE` by the PostgreSQL one. Neither appears in
+   `conf.py`.
+3. **Driver imports are lazy.** `psycopg` is imported only if a PostgreSQL alias
+   is actually provisioned.
+
+An engine with no registered provisioner is a supported configuration, not an
+error — the databases may be created out of band by a DBA or by infrastructure
+code. Everything except provisioning keeps working.
 
 Implement two methods and register the class:
 

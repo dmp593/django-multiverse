@@ -50,22 +50,37 @@ The database used when no tenant is active, and the tenant matched by the
 loopback development shortcut. Read from `settings.DATABASES`, never from a live
 connection.
 
-### `TENANT_DATABASE_DIRECTORY`
+## Backend-specific
+
+These are read by one backend each, and live in that backend's module rather
+than in the engine-neutral core — adding an engine never means editing shared
+code. They are listed here because they are still things you set in
+`settings.py`.
+
+### `TENANT_DATABASE_DIRECTORY` — file-backed engines (SQLite)
 
 *Default:* `BASE_DIR`, else the directory of the base tenant database
 
-Directory that file-backed (SQLite) tenant databases are confined to. Any
-`database_name` resolving outside it raises `SuspiciousOperation`. This is the
-second of two layers stopping a hostile name from escaping; the first is the
-model validator.
+*Read by:* `multiverse.db.backends.sqlite3.utils`
 
-### `TENANT_PROVISIONING_DATABASE`
+Directory that tenant database files are confined to. Any `database_name`
+resolving outside it raises `SuspiciousOperation`. This is the second of two
+layers stopping a hostile name from escaping; the first is the model validator.
+
+Ignored by server-based engines, which address databases by name rather than by
+path.
+
+### `TENANT_PROVISIONING_DATABASE` — server-based engines (PostgreSQL)
 
 *Default:* `'postgres'`
+
+*Read by:* `multiverse.db.backends.postgresql.utils`
 
 Maintenance database used to issue `CREATE DATABASE` / `DROP DATABASE`, which
 cannot be run from the database they target. Change it if your provider does not
 expose `postgres`.
+
+Ignored by file-backed engines, which have no server to connect to.
 
 ## App classification
 

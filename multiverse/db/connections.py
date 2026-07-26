@@ -108,11 +108,16 @@ class TenantConnectionRegistry:
         return f'{self.base_alias}{ALIAS_SEPARATOR}{database_name}'
 
     def _register(self, alias: str, database_name: str) -> None:
-        # Membership is re-checked on every call rather than memoised: Django
-        # rebuilds ``connections.settings`` from scratch whenever ``DATABASES``
-        # is overridden (django.test.signals.reset_connections), which silently
-        # discards everything registered here. Re-checking makes the registry
+        # Membership is re-checked on every call rather than memoised, because
+        # this registry does not own `connections.settings`. `unregister()`
+        # removes entries from it, and tests and downstream libraries replace it
+        # wholesale. Re-checking costs one dict lookup and keeps the registry
         # self-healing instead of leaving dangling aliases behind.
+        #
+        # Note that `override_settings(DATABASES=...)` does *not* reach here:
+        # `ConnectionHandler.settings` is a cached_property with no invalidating
+        # receiver, which is why Django warns that overriding DATABASES leads to
+        # unexpected behaviour. Patch `connections.settings` directly instead.
         if alias in connections.settings:
             return
 

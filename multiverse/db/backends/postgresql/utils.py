@@ -10,11 +10,34 @@ Django's.
 from __future__ import annotations
 
 import psycopg
+from django.conf import settings as django_settings
 from psycopg import sql
 
 from multiverse.conf import multiverse_settings
 from multiverse.db.backends.base import DatabaseProvisioner
 from multiverse.validators import validate_database_name
+
+#: Maintenance database to connect to when issuing server-level DDL.
+#: ``CREATE``/``DROP DATABASE`` cannot be executed from the database they
+#: target, so a second one is needed purely to hold the session. ``postgres``
+#: exists on every stock installation; some managed providers require another.
+DEFAULT_PROVISIONING_DATABASE = 'postgres'
+
+
+def get_provisioning_database_name() -> str:
+    """
+    Read ``TENANT_PROVISIONING_DATABASE``.
+
+    Read here rather than in :mod:`multiverse.conf` because a maintenance
+    database is a server-engine concept that means nothing to SQLite. Keeping it
+    with its backend is what lets a new engine be added without editing the
+    engine-neutral core.
+    """
+    return getattr(
+        django_settings,
+        'TENANT_PROVISIONING_DATABASE',
+        DEFAULT_PROVISIONING_DATABASE,
+    )
 
 
 class PostgreSQLProvisioner(DatabaseProvisioner):
@@ -65,7 +88,7 @@ class PostgreSQLProvisioner(DatabaseProvisioner):
         settings = self.connection_settings
 
         return psycopg.connect(
-            dbname=multiverse_settings.provisioning_database_name,
+            dbname=get_provisioning_database_name(),
             user=settings.get('USER') or None,
             password=settings.get('PASSWORD') or None,
             host=settings.get('HOST') or None,
