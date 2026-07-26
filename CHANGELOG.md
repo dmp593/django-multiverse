@@ -126,10 +126,14 @@ No schema change: `0002` attaches validators and help text only.
   misconfiguration into a startup message.
 - `multiverse.db.backends.base.DatabaseProvisioner` — an explicit contract
   replacing `hasattr` duck-typing, with `register_provisioner()`.
+- **`migrate_tenants`** — applies migrations across every tenant database, the
+  operation that previously had to be hand-rolled as a loop. Stops at the first
+  failure by default, activates each tenant so `RunPython` data migrations can
+  see it, and supports targeting one app, one migration or one tenant.
 - `multiverse.validators`.
 - Settings `TENANT_DATABASE_DIRECTORY`, `TENANT_PROVISIONING_DATABASE`,
   `TENANT_HEADER_ENABLED`, `TENANT_HEADER_NAME`.
-- A 150-test suite over a three-tier example project, covering every optional
+- A 169-test suite over a three-tier example project, covering every optional
   extra, and including guards that the core stays engine-neutral and that a
   third-party backend can be registered from outside the package.
 - `py.typed`, ruff configuration, `CONTRIBUTING.md`, and documentation under

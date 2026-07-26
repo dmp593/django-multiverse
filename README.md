@@ -167,6 +167,10 @@ python manage.py create_tenant acme
 # Same, with an explicit database name and no migrations yet.
 python manage.py create_tenant acme --database-name acme_eu --no-migrate
 
+# Migrate every tenant database. Run this after the ordinary `migrate`,
+# every time an app in TENANT_APPS gains a migration.
+python manage.py migrate_tenants
+
 # Retire a tenant: it stops serving traffic, its data is kept.
 python manage.py destroy_tenant acme
 

@@ -132,6 +132,44 @@ class Invoice(models.Model):          # TENANT
         return BillingAccount.objects.get(pk=self.billing_account_id)
 ```
 
+## Applying a migration across the fleet
+
+The system database and the tenant databases are migrated by two separate
+commands, in that order:
+
+```bash
+python manage.py migrate            # the system database
+python manage.py migrate_tenants    # every tenant database
+```
+
+`migrate_tenants` stops at the first failure by default, because half-applying a
+broken migration across a fleet is worse than stopping. Migrations are
+idempotent, so re-running after a fix skips whatever already succeeded.
+
+```bash
+python manage.py migrate_tenants invoices              # one app
+python manage.py migrate_tenants invoices 0007_x       # one migration
+python manage.py migrate_tenants --tenant acme         # one tenant
+python manage.py migrate_tenants --check               # who is behind?
+python manage.py migrate_tenants --keep-going          # attempt all, report failures
+```
+
+It runs serially. To go faster on a large fleet, shard it across parallel
+invocations with `--tenant` rather than reaching for threads — each tenant is an
+independent database, so sharding is safe where a shared thread pool would need
+its own connection budgeting:
+
+```bash
+python manage.py migrate_tenants --tenant acme --tenant globex &
+python manage.py migrate_tenants --tenant initech --tenant hooli &
+```
+
+Each tenant is activated while its own migrations run, so a `RunPython` data
+migration can call `get_current_tenant()` and know which customer it is
+rewriting.
+
+Soft-deleted tenants are skipped unless you pass `--include-deleted`.
+
 ## Moving an app between tiers
 
 There is no migration path the package can generate for you — the data has to be

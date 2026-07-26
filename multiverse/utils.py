@@ -199,9 +199,14 @@ def drop_tenant_database(tenant) -> tuple[str, bool]:
     return provisioner.drop_if_exists(tenant.database_name)
 
 
-def migrate_tenant_database(tenant=None, **options) -> None:
+def migrate_tenant_database(tenant=None, *args, **options) -> None:
     """
     Run migrations against one tenant's database.
+
+    Positional arguments are forwarded to ``migrate``, so a single app or a
+    single migration can be targeted::
+
+        migrate_tenant_database(tenant, 'invoices', '0007_add_currency')
 
     Pass the tenant explicitly whenever you know it. Earlier releases always
     migrated whichever database the shared tenant alias happened to point at, so
@@ -215,7 +220,7 @@ def migrate_tenant_database(tenant=None, **options) -> None:
 
         database = get_current_database_alias()
 
-    call_command('migrate', database=database, **options)
+    call_command('migrate', *args, database=database, **options)
 
 
 def is_valid_uuid(value: uuid.UUID | str) -> bool:
