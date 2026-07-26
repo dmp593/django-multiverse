@@ -5,6 +5,7 @@ Doubles as a worked example of a correctly configured project: every setting
 django-multiverse understands appears here with a comment explaining the choice.
 """
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,15 +44,30 @@ MIDDLEWARE = [
 # `default` holds the tenant registry and everything else a request needs before
 # its tenant is known. `tenant` is a *template*: its NAME is a placeholder that
 # the active tenant replaces. Both are real, separate databases.
+#
+# The engine is taken from the environment so CI can run the same suite against
+# a real PostgreSQL server. Provisioning is the one thing the ORM does not
+# abstract, so CREATE/DROP DATABASE behaviour has to be proven against the
+# actual engine rather than inferred from SQLite.
+DATABASE_ENGINE = os.environ.get('DATABASE_ENGINE', 'django.db.backends.sqlite3')
+
+if 'sqlite3' in DATABASE_ENGINE:
+    def database(name):
+        return {'ENGINE': DATABASE_ENGINE, 'NAME': BASE_DIR / f'{name}.sqlite3'}
+else:
+    def database(name):
+        return {
+            'ENGINE': DATABASE_ENGINE,
+            'NAME': name,
+            'USER': os.environ.get('DATABASE_USER', ''),
+            'PASSWORD': os.environ.get('DATABASE_PASSWORD', ''),
+            'HOST': os.environ.get('DATABASE_HOST', ''),
+            'PORT': os.environ.get('DATABASE_PORT', ''),
+        }
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'system.sqlite3',
-    },
-    'tenant': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'tenant_base.sqlite3',
-    },
+    'default': database('system'),
+    'tenant': database('tenant_base'),
 }
 
 DATABASE_ROUTERS = ['multiverse.db.router.TenantRouter']

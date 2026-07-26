@@ -1,5 +1,10 @@
 # django-multiverse — Deep Audit & Documentation Plan
 
+> **Status: acted on.** Every S0–S3 finding below was fixed in 2.0.0. This
+> document is kept as the record of what was wrong and why the design changed;
+> see [CHANGELOG.md](../CHANGELOG.md) for what shipped and
+> [UPGRADING.md](UPGRADING.md) for the breaking changes.
+
 **Audited revision:** `bb6eb1a` (branch `main`, `pyproject` version `1.0.5`)
 **Latest published release:** `1.0.9` on PyPI
 **Audit date:** 2026-07-26
