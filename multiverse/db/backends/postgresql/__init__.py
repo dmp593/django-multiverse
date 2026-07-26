@@ -1,6 +1,6 @@
 def __require_psycopg():
     try:
-        import psycopg
+        import psycopg  # noqa: F401
     except ImportError as e:
         raise ImportError(
             'psycopg not installed. '

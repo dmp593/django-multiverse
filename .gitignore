@@ -437,3 +437,8 @@ GitHub.sublime-settings
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/django,python,pycharm+all,visualstudiocode,macos,sublimetext
+
+### django-multiverse ###
+# Databases created by running the test project locally.
+*.sqlite3
+tenant_databases/

@@ -1,6 +1,6 @@
 def __require_django_q2():
     try:
-        import django_q
+        import django_q  # noqa: F401
     except ImportError as e:
         raise ImportError(
             'django-q2 not installed. '
