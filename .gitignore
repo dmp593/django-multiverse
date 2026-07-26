@@ -442,3 +442,4 @@ GitHub.sublime-settings
 # Databases created by running the test project locally.
 *.sqlite3
 tenant_databases/
+.artifacts/
