@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "django-multiverse"
-version = "1.0.5"
-description = "Django Multiverse: Multi-Tenancy for Django"
+version = "2.0.0"
+description = "Django Multiverse: database-per-tenant multi-tenancy for Django"
 authors = ["Daniel Pinto <dmp593@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/dmp593/django-multiverse"
@@ -11,10 +11,9 @@ keywords = ["Django", "Multiverse", "Multi-Tenancy", "Tenants"]
 classifiers = [
     "Environment :: Web Environment",
     "Framework :: Django",
-    "Framework :: Django :: 4.0",
-    "Framework :: Django :: 4.1",
-    "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -24,20 +23,28 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries",
-    "Topic :: Software Development :: Libraries :: Application Frameworks"
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed"
 ]
 
+# `include = "multiverse"` rather than a glob over *.py: a glob silently drops
+# every non-Python file, which would have quietly excluded the py.typed marker.
 packages = [
-    { include = "multiverse/**/*.py" }
+    { include = "multiverse" }
 ]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-Django = "^5.0"
+Django = ">=5.0,<6.0"
+django-timestampable = "^1.1.6"
 psycopg = { version = "^3.2.1", optional = true }
 djangorestframework = { version = "^3.15", optional = true }
 django-q2 = { version = "^1.6.2", optional = true }
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6"
 
 [tool.poetry.extras]
 postgres = ["psycopg"]
@@ -48,3 +55,25 @@ all = ["psycopg", "django-q2", "djangorestframework"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 90
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "S", "C4", "DJ"]
+ignore = [
+    # Assertions in the test suite are the point of the test suite.
+    "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]
+# Fixture models exist to be routed, not displayed.
+"tests/apps/*/models.py" = ["DJ008"]
+# Migrations are generated and, once released, are a historical record.
+"multiverse/migrations/*" = ["E501", "I001"]
+"tests/apps/*/migrations/*" = ["E501", "I001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["multiverse"]

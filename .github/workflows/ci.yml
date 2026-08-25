@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install ruff
+      - run: ruff check multiverse tests
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+        django-version: ['5.0', '5.1', '5.2']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          pip install --upgrade pip
+          pip install "Django~=${{ matrix.django-version }}.0"
+          # Every optional extra: their tests skipUnless the dependency is
+          # present, so omitting one turns real coverage into a silent skip.
+          pip install django-timestampable djangorestframework django-q2 psycopg
+          pip install -e .
+      - name: Test
+        run: python manage.py test tests
+
+  # SQLite is covered by the matrix above; this proves the PostgreSQL
+  # provisioner against a real server, which is where CREATE/DROP DATABASE
+  # behaviour cannot be faked.
+  test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[all]"
+          pip install django-timestampable
+      - name: Test
+        env:
+          DATABASE_ENGINE: django.db.backends.postgresql
+          DATABASE_HOST: localhost
+          DATABASE_PORT: '5432'
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+        run: python manage.py test tests
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install poetry
+      - run: poetry build
+      # A package that builds but cannot be imported is exactly how the
+      # `mywise` defect reached PyPI. Install the artifact and boot Django.
+      - name: Import the built artifact
+        run: |
+          pip install dist/*.whl
+          python -c "
+          import django
+          from django.conf import settings
+          settings.configure(
+              INSTALLED_APPS=['timestamps', 'multiverse'],
+              TENANT_MODEL='multiverse.Tenant',
+              DATABASES={
+                  'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'},
+                  'tenant': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'},
+              },
+          )
+          django.setup()
+          print('imported multiverse', __import__('multiverse').__version__)
+          "

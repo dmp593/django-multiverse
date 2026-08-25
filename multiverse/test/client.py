@@ -1,18 +1,25 @@
-from django.test import RequestFactory, Client
-from django.http import HttpRequest
+"""
+Test clients that address requests to a tenant.
 
-from multiverse.utils import get_tenant_model
+The tenant model is resolved lazily, per request, rather than at import time.
+Resolving it when the module loads froze the model before ``override_settings``
+could swap it and made the import order of this package significant.
+"""
 
+from __future__ import annotations
 
-Tenant = get_tenant_model()
+from django.test import Client, RequestFactory
 
 
 class TenantRequestFactory(RequestFactory):
-    tenant: Tenant
+    """Request factory that sends every request to :attr:`tenant`."""
+
+    #: Tenant these requests are addressed to. Set by ``TenantTestCase``.
+    tenant = None
 
     def generic(self, *args, **kwargs):
-        if "HTTP_HOST" not in kwargs:
-            kwargs["HTTP_HOST"] = self.tenant.subdomain
+        if 'HTTP_HOST' not in kwargs and self.tenant is not None:
+            kwargs['HTTP_HOST'] = self.tenant.subdomain
 
         request = super().generic(*args, **kwargs)
         request.tenant = self.tenant
@@ -21,12 +28,7 @@ class TenantRequestFactory(RequestFactory):
 
 
 class TenantClientMixin(TenantRequestFactory):
-    def login(self, **credentials):
-        request = HttpRequest()
-        request.META['HTTP_HOST'] = self.tenant.subdomain
-        request.tenant = self.tenant
-
-        return super().login(**credentials)
+    pass
 
 
 class TenantClient(TenantClientMixin, Client):
